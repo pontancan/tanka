@@ -56,7 +56,7 @@
   .kirikae button[aria-current="true"]{color:var(--ai);border-bottom-color:var(--ai)}
 
   /* ── 行えらび ── */
-  .gyo{display:flex;flex-wrap:wrap;gap:7px;margin:22px 0 40px}
+  .gyo{display:flex;flex-wrap:wrap;gap:7px;margin:22px 0 0}
   .gyo button{display:flex;align-items:center;gap:6px;font-family:var(--mincho);font-size:15px;padding:7px 11px;border-radius:2px;background:transparent;color:var(--awa);border:1px solid var(--sen)}
   .gyo button[aria-current="true"]{background:var(--ai);color:var(--kami);border-color:var(--ai)}
   .gyo .shirushi{width:5px;height:5px;border-radius:50%;background:transparent}
@@ -66,7 +66,9 @@
   .gyo button[aria-current="true"].kanryo .shirushi{background:var(--kami)}
 
   /* ── 一句 ── */
-  .tanzaku{margin-bottom:14px}
+  /* 五つでちょうど一画面。あまりは上下と間に均等に散らす */
+  #uta{min-height:100vh;min-height:100svh;display:flex;flex-direction:column;justify-content:space-evenly;gap:14px}
+  .tanzaku{flex:none}
   .line{display:flex;align-items:center;gap:10px}
   .odai{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mincho);font-size:16px;color:var(--awa);border:1px solid var(--sen);background:transparent;transition:color .2s,background .2s,border-color .2s}
   .noru .odai{color:var(--kami);background:var(--ai);border-color:var(--ai)}
@@ -295,7 +297,7 @@ const gyoEl = document.getElementById("gyo");
 GYO.forEach((g,i)=>{
   const b = document.createElement("button");
   b.innerHTML = '<span>' + g.na + '行</span><span class="shirushi"></span>';
-  b.onclick = ()=>{ shimau(true); ima = i; kaku(); };
+  b.onclick = ()=>{ shimau(true); ima = i; kaku(); utaEl.scrollIntoView({behavior:"smooth", block:"start"}); };
   gyoEl.appendChild(b);
 });
 
