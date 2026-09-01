@@ -293,7 +293,7 @@ const gyoEl = document.getElementById("gyo");
 GYO.forEach((g,i)=>{
   const b = document.createElement("button");
   b.innerHTML = '<span>' + g.na + '行</span><span class="shirushi"></span>';
-  b.onclick = ()=>{ shimau(true); ima = i; kaku(); utaEl.scrollIntoView({behavior:"smooth", block:"start"}); };
+  b.onclick = ()=>{ shimau(true); ima = i; kaku(); };
   gyoEl.appendChild(b);
 });
 
