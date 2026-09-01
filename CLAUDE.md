@@ -42,9 +42,20 @@
 
 ## デプロイ
 
-Netlify（設定済みの想定）。Cloudflare Pagesでも同じものが動く。
-`netlify deploy --prod --dir .` 。認証はブラウザが開くので、
-リモートから実行するなら `NETLIFY_AUTH_TOKEN` を先に用意しておく。
+GitHub Pages。<https://pontancan.github.io/tanka/>
+リポジトリは <https://github.com/pontancan/tanka>（public、main ブランチのルートを配信）。
+
+**push すれば公開される。** それだけ。
+
+```
+git add -A && git commit -m "..." && git push
+```
+
+反映まで1〜2分。`gh api repos/pontancan/tanka/pages --jq .status` が `built` になれば出ている。
+
+Netlifyにしなかった理由：CLIが入っておらず、ログインでブラウザが開く。
+`gh` は認証済みだったので、リモートから完結する方を選んだ。
+パスは全部相対なので、サブパス配信（/tanka/）でも壊れない。この相対パスは崩さないこと。
 
 ## 残っていること
 
