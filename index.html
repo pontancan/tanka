@@ -102,6 +102,9 @@
   }
   .tate p{margin:0}
 
+  /* 下の遊び。キーボードが上がった時に最後の欄を持ち上げる余地がないと、
+     ブラウザが勝手に画面をずらして「完了」で引き戻す。あれで酔う */
+  #men-yomu{padding-bottom:45vh}
   #men-miru{padding-bottom:40px}
   .dashi{display:flex;flex-wrap:wrap;gap:9px;margin:24px 0 0}
   .dashi button{font-size:14px;padding:10px 16px;border-radius:2px;border:1px solid var(--ai);background:transparent;color:var(--ai)}
@@ -299,6 +302,14 @@ GYO.forEach((g,i)=>{
 
 const utaEl = document.getElementById("uta");
 
+/* キーボードに隠れた時だけ送る。見えているのに動かすと酔う */
+function mieteru(el){
+  const vv = window.visualViewport;
+  const shita = vv ? vv.height + vv.offsetTop : innerHeight;
+  const r = el.getBoundingClientRect();
+  return r.top >= 8 && r.bottom <= shita - 8;
+}
+
 function fuda(){
   [...gyoEl.children].forEach((b,i)=>{
     b.setAttribute("aria-current", i===ima);
@@ -350,7 +361,7 @@ function kaku(){
 
     let henkanchu = false;
     input.addEventListener("focus", ()=>{
-      setTimeout(()=> input.scrollIntoView({block:"center", behavior:"smooth"}), 320);
+      setTimeout(()=>{ if (!mieteru(input)) input.scrollIntoView({block:"center", behavior:"smooth"}); }, 320);
     });
     input.addEventListener("compositionstart", ()=> henkanchu = true);
     input.addEventListener("compositionend", ()=>{ henkanchu = false; input.dispatchEvent(new Event("input")); });
