@@ -107,8 +107,6 @@
   .dashi button.omo{background:var(--ai);color:var(--kami)}
 
   footer{margin-top:30px;font-size:12px;line-height:1.9;color:var(--awa)}
-  .hozon{opacity:0;transition:opacity .5s}
-  .hozon.deta{opacity:1;transition:opacity .12s}
   .keikoku{color:var(--hi)}
   @media (prefers-reduced-motion:reduce){*{transition:none !important}}
 </style>
@@ -149,8 +147,8 @@
     </div>
   </section>
 
-  <footer>
-    <span id="tayori"><span class="hozon" id="hozon">保存しました</span></span>
+  <footer id="shita" hidden>
+    <span id="tayori"></span>
   </footer>
 
 </div>
@@ -220,14 +218,11 @@ let satsu = yomikomu();
 let ima = 0;
 
 let matsu;
-const hozonEl = document.getElementById("hozon");
 function shimau(sugu){
   clearTimeout(matsu);
   const jikko = ()=>{
     satsu.updated = new Date().toISOString();
     kura.kaku(KAGI, JSON.stringify(satsu));
-    hozonEl.classList.add("deta");
-    setTimeout(()=> hozonEl.classList.remove("deta"), 1100);
   };
   sugu ? jikko() : matsu = setTimeout(jikko, HOZON_MACHI);
 }
@@ -542,6 +537,7 @@ addEventListener("pagehide", ()=> shimau(true));
 if (!kura.honmono){
   document.getElementById("tayori").innerHTML =
     '<span class="keikoku">この画面では保存できません。公開したページなら端末に残ります。</span>';
+  document.getElementById("shita").hidden = false;
 }
 
 atama(); utsuru(false); kaku();
