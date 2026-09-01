@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EDF1F0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="旅の短歌">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>旅の短歌</title>
+<style>
+  :root{
+    --yu:#EDF1F0; --kami:#FAFCFB; --sumi:#1D2A32;
+    --ai:#2F5D74; --hi:#C9822F; --awa:#7E9199; --sen:#D3DCDC;
+    --mincho:"Hiragino Mincho ProN","Yu Mincho",serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;overflow-x:hidden;overscroll-behavior-x:none}
+  body{
+    background:var(--yu); color:var(--sumi);
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",system-ui,sans-serif;
+    -webkit-text-size-adjust:100%;
+    padding:0 max(20px, env(safe-area-inset-left)) calc(40px + env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-right));
+  }
+  .wrap{max-width:560px;margin:0 auto}
+  button{font-family:inherit;cursor:pointer}
+  :focus-visible{outline:2px solid var(--hi);outline-offset:2px}
+  [hidden]{display:none !important}
+
+  /* ── 冊のあたま ── */
+  header{padding:26px 0 18px}
+  h1{font-family:var(--mincho);font-size:19px;font-weight:400;letter-spacing:.22em;margin:0 0 14px;color:var(--ai)}
+  .satsu{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;
+         background:var(--kami);border:1px solid var(--sen);border-radius:2px;padding:11px 12px}
+  .namae{font-size:14px;color:var(--sumi);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .namae.kara{color:var(--awa)}
+  .susumi{font-size:12px;color:var(--awa);white-space:nowrap;font-variant-numeric:tabular-nums;margin-left:auto}
+  .kake{flex:none;width:8px;height:8px;border-right:1.5px solid var(--awa);border-bottom:1.5px solid var(--awa);
+        transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s}
+  .satsu[aria-expanded="true"] .kake{transform:rotate(225deg) translate(-2px,-2px)}
+
+  .shirabe{margin-top:14px;display:grid;gap:10px}
+  .shirabe label{display:grid;gap:5px;font-size:12px;color:var(--awa)}
+  .shirabe input{font-family:inherit;font-size:16px;color:var(--sumi);background:var(--kami);border:1px solid var(--sen);border-radius:2px;padding:9px 10px;width:100%}
+  .shirabe input[type="date"]{text-align:left;-webkit-appearance:none;appearance:none;min-height:38px;display:block}
+  .shirabe input[type="date"]::-webkit-date-and-time-value{text-align:left;display:block;width:100%;margin:0}
+  .shirabe input[type="date"]::-webkit-datetime-edit{text-align:left;width:100%}
+  .tojiru{justify-self:start;font-size:13px;color:var(--ai);background:transparent;border:1px solid var(--sen);border-radius:2px;padding:6px 12px}
+
+  /* ── 画面きりかえ ── */
+  .kirikae{display:flex;gap:0;margin:18px 0 0;border-bottom:1px solid var(--sen)}
+  .kirikae button{font-size:14px;color:var(--awa);background:transparent;border:0;border-bottom:2px solid transparent;padding:9px 2px;margin-right:22px}
+  .kirikae button[aria-current="true"]{color:var(--ai);border-bottom-color:var(--ai)}
+
+  /* ── 行えらび ── */
+  .gyo{display:flex;flex-wrap:wrap;gap:7px;margin:22px 0 26px}
+  .gyo button{display:flex;align-items:center;gap:6px;font-family:var(--mincho);font-size:15px;padding:7px 11px;border-radius:2px;background:transparent;color:var(--awa);border:1px solid var(--sen)}
+  .gyo button[aria-current="true"]{background:var(--ai);color:var(--kami);border-color:var(--ai)}
+  .gyo .shirushi{width:5px;height:5px;border-radius:50%;background:transparent}
+  .gyo .kakikake .shirushi{background:var(--sen)}
+  .gyo .kanryo .shirushi{background:var(--ai)}
+  .gyo button[aria-current="true"] .shirushi{background:rgba(250,252,251,.5)}
+  .gyo button[aria-current="true"].kanryo .shirushi{background:var(--kami)}
+
+  /* ── 一句 ── */
+  .tanzaku{margin-bottom:14px}
+  .line{display:flex;align-items:center;gap:10px}
+  .odai{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mincho);font-size:16px;color:var(--awa);border:1px solid var(--sen);background:transparent;transition:color .2s,background .2s,border-color .2s}
+  .noru .odai{color:var(--kami);background:var(--ai);border-color:var(--ai)}
+  .strip{flex:1;min-width:0;background:var(--kami);border:1px solid var(--sen);border-radius:2px}
+  .mijika .strip{flex:0 0 72%}
+  .strip:focus-within{border-color:var(--ai)}
+  .strip input{width:100%;font-family:var(--mincho);font-size:19px;line-height:1.6;color:var(--sumi);background:transparent;border:0;padding:14px 12px}
+
+  .kazu{display:flex;align-items:center;gap:9px;padding:6px 3px 0 40px}
+  .tama{display:flex;gap:4px}
+  .tama i{width:6px;height:6px;border-radius:50%;background:var(--sen);display:block}
+  .tama i.on{background:var(--ai)}
+  .tama i.over{background:var(--hi)}
+  .su{font-size:12px;color:var(--awa);font-variant-numeric:tabular-nums}
+  .su.pittari{color:var(--ai)}
+  .su.amari{color:var(--hi)}
+  .kari{font-size:11px;color:var(--awa);margin-left:2px}
+
+  /* ── 冊ビュー ── */
+  .hyoshi{margin:26px 0 8px}
+  .hyoshi .tabi{font-family:var(--mincho);font-size:22px;line-height:1.5;margin:0 0 8px}
+  .hyoshi .soe{font-size:12px;color:var(--awa);line-height:1.9}
+  .kara-satsu{font-size:14px;color:var(--awa);line-height:1.9;margin:30px 0}
+
+  .tate{
+    writing-mode:vertical-rl;
+    font-family:var(--mincho);font-size:17px;line-height:2.1;letter-spacing:.06em;
+    background:var(--kami);border:1px solid var(--sen);border-radius:2px;
+    padding:20px 16px;margin:0 0 14px;min-height:270px;
+    overflow-x:auto;overscroll-behavior-x:contain;
+  }
+  .tate p{margin:0}
+
+  .dashi{display:flex;flex-wrap:wrap;gap:9px;margin:24px 0 0}
+  .dashi button{font-size:14px;padding:10px 16px;border-radius:2px;border:1px solid var(--ai);background:transparent;color:var(--ai)}
+  .dashi button.omo{background:var(--ai);color:var(--kami)}
+
+  footer{margin-top:30px;font-size:12px;line-height:1.9;color:var(--awa)}
+  .hozon{opacity:0;transition:opacity .5s}
+  .hozon.deta{opacity:1;transition:opacity .12s}
+  .keikoku{color:var(--hi)}
+  @media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>旅の短歌</h1>
+    <button class="satsu" id="satsu" aria-expanded="false">
+      <span class="namae" id="namae"></span>
+      <span class="kake" aria-hidden="true"></span>
+      <span class="susumi" id="susumi"></span>
+    </button>
+    <div class="shirabe" id="shirabe" hidden>
+      <label>旅の名前<input id="f-title" type="text" placeholder="熱海の旅"></label>
+      <label>日付<input id="f-date" type="date"></label>
+      <label>いっしょによむひと<input id="f-members" type="text" placeholder="Aさん、Bさん"></label>
+      <button class="tojiru" id="tojiru">とじる</button>
+    </div>
+    <nav class="kirikae" aria-label="画面">
+      <button id="tab-yomu">よむ</button>
+      <button id="tab-miru">おもいで</button>
+    </nav>
+  </header>
+
+  <section id="men-yomu">
+    <nav class="gyo" id="gyo" aria-label="行をえらぶ"></nav>
+    <div id="uta"></div>
+  </section>
+
+  <section id="men-miru" hidden>
+    <div class="hyoshi" id="hyoshi"></div>
+    <div id="satsu-hon"></div>
+    <div class="dashi">
+      <button class="omo" id="e-gazo">画像にする</button>
+      <button id="e-moji">文字をコピー</button>
+    </div>
+  </section>
+
+  <footer>
+    <span id="tayori"><span class="hozon" id="hozon">保存しました</span></span>
+  </footer>
+
+</div>
+
+<script>
+/* ── 行のデータ（や行は借り字） ── */
+const GYO = [
+  {na:"あ", on:["あ","い","う","え","お"]},
+  {na:"か", on:["か","き","く","け","こ"]},
+  {na:"さ", on:["さ","し","す","せ","そ"]},
+  {na:"た", on:["た","ち","つ","て","と"]},
+  {na:"な", on:["な","に","ぬ","ね","の"]},
+  {na:"は", on:["は","ひ","ふ","へ","ほ"]},
+  {na:"ま", on:["ま","み","む","め","も"]},
+  {na:"や", on:["や","い","ゆ","え","よ"], kari:[1,3]},
+  {na:"ら", on:["ら","り","る","れ","ろ"]},
+];
+const HAKU = [5,7,5,7,7];
+const AMARI = 2;
+
+/* ── 音を数える ── */
+const CHIISAI = "ゃゅょぁぃぅぇぉゎャュョァィゥェォヮヵヶ";
+function kazoeru(s){
+  let n = 0;
+  for (const c of s){
+    if (CHIISAI.includes(c)) continue;
+    const u = c.codePointAt(0);
+    if ((u>=0x3041 && u<=0x3096) || (u>=0x30A1 && u<=0x30FA) || c==="ー") n++;
+  }
+  return n;
+}
+const DAKUTEN = {が:"か",ぎ:"き",ぐ:"く",げ:"け",ご:"こ",ざ:"さ",じ:"し",ず:"す",ぜ:"せ",ぞ:"そ",
+                 だ:"た",ぢ:"ち",づ:"つ",で:"て",ど:"と",ば:"は",び:"ひ",ぶ:"ふ",べ:"へ",ぼ:"ほ",
+                 ぱ:"は",ぴ:"ひ",ぷ:"ふ",ぺ:"へ",ぽ:"ほ"};
+function sunao(c){
+  if (!c) return "";
+  const u = c.codePointAt(0);
+  if (u>=0x30A1 && u<=0x30F6) c = String.fromCodePoint(u-0x60);
+  return DAKUTEN[c] || c;
+}
+
+/* ── しまう場所 ── */
+const kura = (()=>{
+  let mem = {}, tsukaeru = true;
+  try{ localStorage.setItem("__t","1"); localStorage.removeItem("__t"); }catch(e){ tsukaeru = false; }
+  return {
+    yomu(k){ try{ return tsukaeru ? localStorage.getItem(k) : (mem[k] ?? null); }catch(e){ return mem[k] ?? null; } },
+    kaku(k,v){ try{ tsukaeru ? localStorage.setItem(k,v) : (mem[k]=v); }catch(e){ mem[k]=v; } },
+    honmono: tsukaeru
+  };
+})();
+const KAGI = "tabi-tanka:satsu";
+const HOZON_MACHI = 150;
+
+function karasatsu(){ return { v:1, title:"", date:"", members:"", gyo: GYO.map(()=>["","","","",""]), updated:"" }; }
+function yomikomu(){
+  try{
+    const s = JSON.parse(kura.yomu(KAGI) || "null");
+    if (!s || s.v !== 1 || !Array.isArray(s.gyo)) return karasatsu();
+    const k = karasatsu();
+    k.title = s.title || ""; k.date = s.date || ""; k.members = s.members || "";
+    s.gyo.forEach((g,i)=>{ if (k.gyo[i] && Array.isArray(g)) g.forEach((v,j)=>{ if (j<5) k.gyo[i][j] = String(v||""); }); });
+    return k;
+  }catch(e){ return karasatsu(); }
+}
+let satsu = yomikomu();
+let ima = 0;
+
+let matsu;
+const hozonEl = document.getElementById("hozon");
+function shimau(sugu){
+  clearTimeout(matsu);
+  const jikko = ()=>{
+    satsu.updated = new Date().toISOString();
+    kura.kaku(KAGI, JSON.stringify(satsu));
+    hozonEl.classList.add("deta");
+    setTimeout(()=> hozonEl.classList.remove("deta"), 1100);
+  };
+  sugu ? jikko() : matsu = setTimeout(jikko, HOZON_MACHI);
+}
+
+/* ── 冊のあたま ── */
+const namaeEl = document.getElementById("namae");
+const susumiEl = document.getElementById("susumi");
+const shirabeEl = document.getElementById("shirabe");
+const satsuBtn = document.getElementById("satsu");
+const fTitle = document.getElementById("f-title");
+const fDate = document.getElementById("f-date");
+const fMembers = document.getElementById("f-members");
+
+satsuBtn.onclick = ()=>{
+  const hiraku = shirabeEl.hidden;
+  shirabeEl.hidden = !hiraku;
+  satsuBtn.setAttribute("aria-expanded", hiraku);
+  if (hiraku) fTitle.focus();
+};
+document.getElementById("tojiru").onclick = ()=>{
+  shirabeEl.hidden = true;
+  satsuBtn.setAttribute("aria-expanded","false");
+};
+[[fTitle,"title"],[fDate,"date"],[fMembers,"members"]].forEach(([el,key])=>{
+  el.value = satsu[key];
+  el.addEventListener("input", ()=>{ satsu[key] = el.value; atama(); shimau(); });
+});
+
+function kansei(i){ return satsu.gyo[i].every(v => v.trim() !== ""); }
+function kakikake(i){ return satsu.gyo[i].some(v => v.trim() !== ""); }
+function ninzu(s){ return s.split(/[、,・\s]+/).filter(v => v.trim() !== "").length; }
+function hitobito(){
+  const list = satsu.members.split(/[、,・\s]+/).filter(v => v.trim() !== "");
+  if (!list.length) return "";
+  const nami = list.join("、");
+  return nami.length <= 12 ? nami : list.length + "人";   /* 長くなったら人数にたたむ */
+}
+function hizuke(){ return satsu.date ? satsu.date.replaceAll("-",".") : ""; }
+
+function atama(){
+  const bun = [];
+  if (satsu.title) bun.push(satsu.title);
+  if (hizuke()) bun.push(hizuke());
+  const hito = hitobito();
+  if (hito) bun.push(hito);
+  namaeEl.textContent = bun.length ? bun.join(" · ") : "旅の名前をつける";
+  namaeEl.classList.toggle("kara", !bun.length);
+  susumiEl.textContent = GYO.reduce((a,_,i)=> a + (kansei(i)?1:0), 0) + " / 9 首";
+}
+
+/* ── 画面きりかえ ── */
+const menYomu = document.getElementById("men-yomu");
+const menMiru = document.getElementById("men-miru");
+const tabYomu = document.getElementById("tab-yomu");
+const tabMiru = document.getElementById("tab-miru");
+function utsuru(miru){
+  menYomu.hidden = miru; menMiru.hidden = !miru;
+  tabYomu.setAttribute("aria-current", !miru);
+  tabMiru.setAttribute("aria-current", miru);
+  if (miru) hon();
+}
+tabYomu.onclick = ()=> utsuru(false);
+tabMiru.onclick = ()=>{ shimau(true); utsuru(true); };
+
+/* ── 行えらび ── */
+const gyoEl = document.getElementById("gyo");
+GYO.forEach((g,i)=>{
+  const b = document.createElement("button");
+  b.innerHTML = '<span>' + g.na + '行</span><span class="shirushi"></span>';
+  b.onclick = ()=>{ shimau(true); ima = i; kaku(); };
+  gyoEl.appendChild(b);
+});
+
+const utaEl = document.getElementById("uta");
+
+function fuda(){
+  [...gyoEl.children].forEach((b,i)=>{
+    b.setAttribute("aria-current", i===ima);
+    b.classList.toggle("kanryo", kansei(i));
+    b.classList.toggle("kakikake", !kansei(i) && kakikake(i));
+  });
+}
+
+function kaku(){
+  utaEl.innerHTML = "";
+  const g = GYO[ima];
+  g.on.forEach((oto,i)=>{
+    const haku = HAKU[i], kagiri = haku + AMARI;
+
+    const box = document.createElement("div");
+    box.className = "tanzaku" + (haku===5 ? " mijika" : "");
+    const line = document.createElement("div"); line.className = "line";
+
+    const odai = document.createElement("div");
+    odai.className = "odai"; odai.textContent = oto; odai.setAttribute("aria-hidden","true");
+
+    const strip = document.createElement("div"); strip.className = "strip";
+    const input = document.createElement("input");
+    input.type = "text"; input.value = satsu.gyo[ima][i];
+    input.setAttribute("aria-label", oto + "からはじまる" + haku + "音");
+    strip.appendChild(input);
+
+    const kazu = document.createElement("div"); kazu.className = "kazu";
+    const tama = document.createElement("div"); tama.className = "tama";
+    const su = document.createElement("span"); su.className = "su";
+    kazu.append(tama, su);
+    if (g.kari && g.kari.includes(i)){
+      const k = document.createElement("span"); k.className = "kari"; k.textContent = "借り字";
+      kazu.appendChild(k);
+    }
+
+    function nurikae(){
+      const n = kazoeru(input.value);
+      tama.innerHTML = "";
+      for (let j=0; j<Math.max(haku,n); j++){
+        const t = document.createElement("i");
+        if (j < n) t.className = (j < haku) ? "on" : "over";
+        tama.appendChild(t);
+      }
+      su.textContent = n + " / " + haku;
+      su.className = "su" + (n===haku ? " pittari" : n>haku ? " amari" : "");
+      line.classList.toggle("noru", sunao([...input.value][0]) === oto);
+    }
+
+    let henkanchu = false;
+    input.addEventListener("focus", ()=>{
+      setTimeout(()=> input.scrollIntoView({block:"center", behavior:"smooth"}), 320);
+    });
+    input.addEventListener("compositionstart", ()=> henkanchu = true);
+    input.addEventListener("compositionend", ()=>{ henkanchu = false; input.dispatchEvent(new Event("input")); });
+    input.addEventListener("input", ()=>{
+      if (!henkanchu){
+        let v = input.value;
+        while (kazoeru(v) > kagiri && v.length) v = v.slice(0,-1);
+        if (v !== input.value) input.value = v;
+      }
+      satsu.gyo[ima][i] = input.value;
+      nurikae(); fuda(); atama(); shimau();
+    });
+
+    line.append(odai, strip);
+    box.append(line, kazu);
+    utaEl.appendChild(box);
+    nurikae();
+  });
+  fuda();
+}
+
+/* ── 冊ビュー ── */
+function aruUta(){
+  return GYO.map((g,i)=>({ i, ku: satsu.gyo[i] }))
+            .filter(u => u.ku.some(v => v.trim() !== ""));
+}
+
+function hon(){
+  const hyoshi = document.getElementById("hyoshi");
+  const soe = [];
+  if (hizuke()) soe.push(hizuke());
+  if (satsu.members) soe.push(satsu.members);
+  hyoshi.innerHTML =
+    '<p class="tabi">' + (satsu.title ? esc(satsu.title) : "名前のない旅") + '</p>' +
+    (soe.length ? '<p class="soe">' + esc(soe.join("　／　")) + '</p>' : "");
+
+  const hako = document.getElementById("satsu-hon");
+  hako.innerHTML = "";
+  const utas = aruUta();
+  if (!utas.length){
+    hako.innerHTML = '<p class="kara-satsu">まだ一句もありません。<br>「よむ」から書きはじめてください。</p>';
+    return;
+  }
+  utas.forEach(u=>{
+    const d = document.createElement("div");
+    d.className = "tate";
+    d.innerHTML = u.ku.filter(v=>v.trim()!=="").map(v=>'<p>'+esc(v)+'</p>').join("");
+    hako.appendChild(d);
+  });
+}
+function esc(s){ return s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ── 文字にする ── */
+function mojiban(){
+  const atama = [satsu.title || "旅の短歌"];
+  const soe = [];
+  if (hizuke()) soe.push(hizuke());
+  if (satsu.members) soe.push(satsu.members);
+  if (soe.length) atama.push(soe.join(" ／ "));
+  const hon = aruUta().map(u => u.ku.filter(v=>v.trim()!=="").join("\n")).join("\n\n");
+  return atama.join("\n") + "\n\n" + hon + "\n";
+}
+
+document.getElementById("e-moji").onclick = async (e)=>{
+  const t = mojiban();
+  const btn = e.currentTarget;
+  try{
+    await navigator.clipboard.writeText(t);
+    shirase(btn, "コピーしました");
+  }catch(err){
+    const ta = document.createElement("textarea");
+    ta.value = t; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); shirase(btn,"コピーしました"); }
+    catch(e2){ shirase(btn,"コピーできませんでした"); }
+    ta.remove();
+  }
+};
+function shirase(btn, kotoba){
+  const moto = btn.textContent;
+  btn.textContent = kotoba;
+  setTimeout(()=> btn.textContent = moto, 1600);
+}
+
+/* ── 画像にする（縦書きで描く） ── */
+const TATEBOU = "ー～〜―‐-";
+function tateKaku(ctx, moji, cx, ue, size, ayumi){
+  [...moji].forEach((c,i)=>{
+    const y = ue + ayumi*i + ayumi/2;
+    if (TATEBOU.includes(c)){
+      ctx.save(); ctx.translate(cx, y); ctx.rotate(Math.PI/2);
+      ctx.fillText(c, 0, 0); ctx.restore();
+    } else if (CHIISAI.includes(c)){
+      ctx.fillText(c, cx + size*0.10, y - size*0.10);
+    } else {
+      ctx.fillText(c, cx, y);
+    }
+  });
+}
+
+document.getElementById("e-gazo").onclick = async (e)=>{
+  const btn = e.currentTarget;
+  const utas = aruUta();
+  if (!utas.length){ shirase(btn, "まだ一句もありません"); return; }
+
+  const W = 480, size = 27, ayumi = 33, habaKu = 46;
+  const uchi = 24, hidari = 34;          /* 短冊のふち／落款のための左のあき */
+  const nagasa = Math.max(...utas.flatMap(u => u.ku.map(v => [...v].length)));
+  const takaKu = ayumi * Math.max(nagasa, 8);
+  const fudaW = habaKu*5 + uchi*2 + hidari;
+  const fudaH = takaKu + uchi*2;
+  const fudaX = (W - fudaW)/2;
+  const aida = 26;
+
+  const soe = [];
+  if (hizuke()) soe.push(hizuke());
+  if (satsu.members) soe.push(satsu.members);
+  const atamaTaka = 96 + (soe.length ? 28 : 0);
+  const H = atamaTaka + utas.length*(fudaH + aida) - aida + 44;
+
+  const hi = window.devicePixelRatio > 1 ? 2 : 1;
+  const cv = document.createElement("canvas");
+  cv.width = W*hi; cv.height = H*hi;
+  const ctx = cv.getContext("2d");
+  ctx.scale(hi,hi);
+
+  ctx.fillStyle = "#EDF1F0"; ctx.fillRect(0,0,W,H);
+
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "#2F5D74";
+  ctx.font = '400 25px "Hiragino Mincho ProN","Yu Mincho",serif';
+  ctx.fillText(satsu.title || "名前のない旅", W/2, 62);
+  if (soe.length){
+    ctx.fillStyle = "#7E9199";
+    ctx.font = '400 13px "Hiragino Sans",sans-serif';
+    ctx.fillText(soe.join("　／　"), W/2, 88);
+  }
+
+  const honFont = '400 ' + size + 'px "Hiragino Mincho ProN","Yu Mincho",serif';
+  let y = atamaTaka;
+  utas.forEach(u=>{
+    ctx.fillStyle = "#FAFCFB";
+    ctx.fillRect(fudaX, y, fudaW, fudaH);
+    ctx.strokeStyle = "#D3DCDC"; ctx.lineWidth = 1;
+    ctx.strokeRect(fudaX+.5, y+.5, fudaW-1, fudaH-1);
+
+    ctx.fillStyle = "#1D2A32"; ctx.font = honFont;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    let x = fudaX + fudaW - uchi - habaKu/2;
+    u.ku.forEach(v=>{
+      if (v.trim() !== "") tateKaku(ctx, v, x, y + uchi, size, ayumi);
+      x -= habaKu;
+    });
+
+    /* 落款のかわりに、行のまるを左下へ */
+    const cx = fudaX + uchi + 15, cy = y + fudaH - uchi - 15;
+    ctx.beginPath(); ctx.arc(cx, cy, 14, 0, Math.PI*2);
+    ctx.fillStyle = "#2F5D74"; ctx.fill();
+    ctx.fillStyle = "#FAFCFB";
+    ctx.font = '400 15px "Hiragino Mincho ProN","Yu Mincho",serif';
+    ctx.fillText(GYO[u.i].na, cx, cy+1);
+    ctx.font = honFont;
+
+    y += fudaH + aida;
+  });
+
+  const namae = (satsu.title || "旅の短歌") + ".png";
+  cv.toBlob(async (blob)=>{
+    if (!blob){ shirase(btn,"画像にできませんでした"); return; }
+    const file = new File([blob], namae, {type:"image/png"});
+    if (navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file]}); return; }catch(err){ if (err.name === "AbortError") return; }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = namae; a.click();
+    setTimeout(()=> URL.revokeObjectURL(url), 4000);
+    shirase(btn, "画像を保存しました");
+  }, "image/png");
+};
+
+addEventListener("visibilitychange", ()=>{ if (document.hidden) shimau(true); });
+addEventListener("pagehide", ()=> shimau(true));
+
+if (!kura.honmono){
+  document.getElementById("tayori").innerHTML =
+    '<span class="keikoku">この画面では保存できません。公開したページなら端末に残ります。</span>';
+}
+
+atama(); utsuru(false); kaku();
+
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  addEventListener("load", ()=> navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
