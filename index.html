@@ -171,7 +171,6 @@ const GYO = [
   {na:"ら", on:["ら","り","る","れ","ろ"]},
 ];
 const HAKU = [5,7,5,7,7];
-const AMARI = 2;
 
 /* ── 音を数える ── */
 const CHIISAI = "ゃゅょぁぃぅぇぉゎャュョァィゥェォヮヵヶ";
@@ -322,7 +321,7 @@ function kaku(){
   utaEl.innerHTML = "";
   const g = GYO[ima];
   g.on.forEach((oto,i)=>{
-    const haku = HAKU[i], kagiri = haku + AMARI;
+    const haku = HAKU[i];
 
     const box = document.createElement("div");
     box.className = "tanzaku" + (haku===5 ? " mijika" : "");
@@ -367,9 +366,10 @@ function kaku(){
     input.addEventListener("compositionend", ()=>{ henkanchu = false; input.dispatchEvent(new Event("input")); });
     input.addEventListener("input", ()=>{
       if (!henkanchu){
-        let v = input.value;
-        while (kazoeru(v) > kagiri && v.length) v = v.slice(0,-1);
-        if (v !== input.value) input.value = v;
+        /* 音数では切らない。枠にはいるところまで */
+        while (input.scrollWidth > input.clientWidth && input.value.length){
+          input.value = input.value.slice(0,-1);
+        }
       }
       satsu.gyo[ima][i] = input.value;
       nurikae(); fuda(); atama(); shimau();
