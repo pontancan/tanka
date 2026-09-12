@@ -45,9 +45,23 @@
   .shirabe{margin-top:14px;display:grid;gap:10px}
   .shirabe label{display:grid;gap:5px;font-size:12px;color:var(--awa)}
   .shirabe input{font-family:inherit;font-size:16px;color:var(--sumi);background:var(--kami);border:1px solid var(--sen);border-radius:2px;padding:9px 10px;width:100%}
-  .shirabe input[type="date"]{text-align:left;-webkit-appearance:none;appearance:none;min-height:38px;display:block}
-  .shirabe input[type="date"]::-webkit-date-and-time-value{text-align:left;display:block;width:100%;margin:0}
-  .shirabe input[type="date"]::-webkit-datetime-edit{text-align:left;width:100%}
+  .shirabe .ran{display:grid;gap:5px;font-size:12px;color:var(--awa)}
+
+  /* ── 暦。指でなぞって日をえらぶ ── */
+  .koyomi{background:var(--kami);border:1px solid var(--sen);border-radius:2px;padding:8px 8px 4px}
+  .tsuki{display:flex;align-items:center;justify-content:space-between}
+  .tsuki b{font-family:var(--mincho);font-size:15px;font-weight:400;color:var(--sumi)}
+  .tsuki button{width:36px;height:36px;border:0;background:transparent;color:var(--ai);font-size:20px;line-height:1;border-radius:2px}
+  .yobi,.hi{display:grid;grid-template-columns:repeat(7,1fr)}
+  .yobi{font-size:11px;color:var(--awa);text-align:center;padding:4px 0 2px}
+  /* なぞる間にページが動かないように。これが無いとiOSではスクロールに食われる */
+  .hi{touch-action:none;-webkit-user-select:none;user-select:none}
+  .hi button{aspect-ratio:1;min-height:38px;border:0;background:transparent;
+             color:var(--sumi);font-size:14px;font-family:inherit;padding:0}
+  .hi button:disabled{visibility:hidden}
+  .hi .kyou{box-shadow:inset 0 0 0 1px var(--sen);border-radius:2px}
+  .hi .aida{background:rgba(47,93,116,.13);border-radius:0}
+  .hi .hashi{background:var(--ai);color:var(--kami);border-radius:2px}
   .tojiru{justify-self:start;font-size:13px;color:var(--ai);background:transparent;border:1px solid var(--sen);border-radius:2px;padding:6px 12px}
 
   /* ── 画面きりかえ ── */
@@ -127,7 +141,17 @@
     </button>
     <div class="shirabe" id="shirabe" hidden>
       <label>旅の名前<input id="f-title" type="text" placeholder="熱海の旅"></label>
-      <label>日付<input id="f-date" type="date"></label>
+      <div class="ran">日付
+        <div class="koyomi">
+          <div class="tsuki">
+            <button type="button" id="mae-tsuki" aria-label="前の月">‹</button>
+            <b id="tsuki-na"></b>
+            <button type="button" id="tsugi-tsuki" aria-label="次の月">›</button>
+          </div>
+          <div class="yobi" aria-hidden="true"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+          <div class="hi" id="hi-grid"></div>
+        </div>
+      </div>
       <label>いっしょによむひと<input id="f-members" type="text" placeholder="Aさん、Bさん"></label>
       <button class="tojiru" id="tojiru">とじる</button>
     </div>
@@ -206,13 +230,13 @@ const kura = (()=>{
 const KAGI = "tabi-tanka:satsu";
 const HOZON_MACHI = 150;
 
-function karasatsu(){ return { v:1, title:"", date:"", members:"", gyo: GYO.map(()=>["","","","",""]), updated:"" }; }
+function karasatsu(){ return { v:1, title:"", date:"", dateEnd:"", members:"", gyo: GYO.map(()=>["","","","",""]), updated:"" }; }
 function yomikomu(){
   try{
     const s = JSON.parse(kura.yomu(KAGI) || "null");
     if (!s || s.v !== 1 || !Array.isArray(s.gyo)) return karasatsu();
     const k = karasatsu();
-    k.title = s.title || ""; k.date = s.date || ""; k.members = s.members || "";
+    k.title = s.title || ""; k.date = s.date || ""; k.dateEnd = s.dateEnd || ""; k.members = s.members || "";
     s.gyo.forEach((g,i)=>{ if (k.gyo[i] && Array.isArray(g)) g.forEach((v,j)=>{ if (j<5) k.gyo[i][j] = String(v||""); }); });
     return k;
   }catch(e){ return karasatsu(); }
@@ -236,7 +260,6 @@ const susumiEl = document.getElementById("susumi");
 const shirabeEl = document.getElementById("shirabe");
 const satsuBtn = document.getElementById("satsu");
 const fTitle = document.getElementById("f-title");
-const fDate = document.getElementById("f-date");
 const fMembers = document.getElementById("f-members");
 
 satsuBtn.onclick = ()=>{
@@ -249,10 +272,115 @@ document.getElementById("tojiru").onclick = ()=>{
   shirabeEl.hidden = true;
   satsuBtn.setAttribute("aria-expanded","false");
 };
-[[fTitle,"title"],[fDate,"date"],[fMembers,"members"]].forEach(([el,key])=>{
+[[fTitle,"title"],[fMembers,"members"]].forEach(([el,key])=>{
   el.value = satsu[key];
   el.addEventListener("input", ()=>{ satsu[key] = el.value; atama(); shimau(); });
 });
+
+/* ── 暦 ──
+   一日だけなら、ぽんと触る。何日かにわたるなら、指でなぞる。
+   なぞり終えていない間は machi が立っていて、次に触った日まで伸びる
+   （指でなぞれない時も、二度触れば範囲になる）。 */
+const hiGrid = document.getElementById("hi-grid");
+const tsukiNa = document.getElementById("tsuki-na");
+
+const moji = d => d.getFullYear() + "-" +
+  String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+
+let miteruTsuki = (()=>{
+  const t = satsu.date ? new Date(satsu.date + "T00:00") : new Date();
+  return new Date(t.getFullYear(), t.getMonth(), 1);
+})();
+let kiten = null, machi = false, nazotta = false;
+
+function erabu(a, b){
+  if (a > b) [a, b] = [b, a];
+  satsu.date = a; satsu.dateEnd = (a === b) ? "" : b;
+  nuru(); atama(); shimau();
+}
+
+function nuru(){
+  const a = satsu.date, b = satsu.dateEnd || satsu.date;
+  const kyou = moji(new Date());
+  [...hiGrid.children].forEach(el=>{
+    const h = el.dataset.hi;
+    if (!h) return;
+    const naka = a && h >= a && h <= b;
+    el.classList.toggle("aida", naka && h !== a && h !== b);
+    el.classList.toggle("hashi", naka && (h === a || h === b));
+    el.classList.toggle("kyou", h === kyou && !naka);
+    el.setAttribute("aria-pressed", naka);
+  });
+}
+
+function kakuKoyomi(){
+  const y = miteruTsuki.getFullYear(), m = miteruTsuki.getMonth();
+  tsukiNa.textContent = y + "年 " + (m+1) + "月";
+  hiGrid.innerHTML = "";
+  const saki = new Date(y, m, 1).getDay();
+  const kazu = new Date(y, m+1, 0).getDate();
+  for (let i=0; i<saki; i++){
+    const a = document.createElement("button");
+    a.type = "button"; a.disabled = true; a.tabIndex = -1;
+    hiGrid.appendChild(a);
+  }
+  for (let d=1; d<=kazu; d++){
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = d;
+    b.dataset.hi = moji(new Date(y, m, d));
+    hiGrid.appendChild(b);
+  }
+  nuru();
+}
+
+function hiNo(x, y){
+  const el = document.elementFromPoint(x, y);
+  const b = el && el.closest ? el.closest("[data-hi]") : null;
+  return b && hiGrid.contains(b) ? b.dataset.hi : null;
+}
+
+hiGrid.addEventListener("pointerdown", e=>{
+  const h = hiNo(e.clientX, e.clientY);
+  if (!h) return;
+  e.preventDefault();
+  hiGrid.setPointerCapture(e.pointerId);
+  nazotta = false;
+  if (machi && kiten){ erabu(kiten, h); machi = false; }
+  else { kiten = h; machi = true; erabu(h, h); }
+});
+
+hiGrid.addEventListener("pointermove", e=>{
+  if (!hiGrid.hasPointerCapture(e.pointerId) || !kiten) return;
+  const h = hiNo(e.clientX, e.clientY);
+  if (!h || h === satsu.dateEnd) return;
+  nazotta = true;
+  erabu(kiten, h);
+});
+
+function owari(e){
+  if (hiGrid.hasPointerCapture(e.pointerId)) hiGrid.releasePointerCapture(e.pointerId);
+  if (nazotta) machi = false;       /* なぞり終えた＝範囲が決まった */
+}
+hiGrid.addEventListener("pointerup", owari);
+hiGrid.addEventListener("pointercancel", owari);
+
+/* 指を使わない時（キーボードのEnter/Space）。pointerdown を伴わないclickだけ拾う */
+hiGrid.addEventListener("click", e=>{
+  if (e.detail !== 0) return;
+  const b = e.target.closest("[data-hi]");
+  if (!b) return;
+  if (machi && kiten){ erabu(kiten, b.dataset.hi); machi = false; }
+  else { kiten = b.dataset.hi; machi = true; erabu(kiten, kiten); }
+});
+
+document.getElementById("mae-tsuki").onclick = ()=>{
+  miteruTsuki.setMonth(miteruTsuki.getMonth()-1); kakuKoyomi();
+};
+document.getElementById("tsugi-tsuki").onclick = ()=>{
+  miteruTsuki.setMonth(miteruTsuki.getMonth()+1); kakuKoyomi();
+};
+
+kakuKoyomi();
 
 function kansei(i){ return satsu.gyo[i].every(v => v.trim() !== ""); }
 function kakikake(i){ return satsu.gyo[i].some(v => v.trim() !== ""); }
@@ -263,7 +391,16 @@ function hitobito(){
   const nami = list.join("、");
   return nami.length <= 12 ? nami : list.length + "人";   /* 長くなったら人数にたたむ */
 }
-function hizuke(){ return satsu.date ? satsu.date.replaceAll("-",".") : ""; }
+function hizuke(){
+  const a = satsu.date, b = satsu.dateEnd;
+  if (!a) return "";
+  const ten = t => t.replaceAll("-",".");
+  if (!b || b === a) return ten(a);
+  const [ay,am] = a.split("-"), [by,bm,bd] = b.split("-");
+  if (ay !== by) return ten(a) + "–" + ten(b);
+  if (am !== bm) return ten(a) + "–" + bm + "." + bd;
+  return ten(a) + "–" + bd;
+}
 
 function atama(){
   const bun = [];
