@@ -699,10 +699,14 @@ async function utsusu(btn, t){
   }
 }
 document.getElementById("e-moji").onclick = (e)=> utsusu(e.currentTarget, mojiban());
+/* 本当の文字は一度だけ控える。毎回控えると、通知が出ている最中に
+   もう一度呼ばれた時に *通知文* を「元の文字」として控えてしまい、居座る */
+const shiraseMachi = new WeakMap();
 function shirase(btn, kotoba){
-  const moto = btn.textContent;
+  if (!btn.dataset.moto) btn.dataset.moto = btn.textContent;
+  clearTimeout(shiraseMachi.get(btn));
   btn.textContent = kotoba;
-  setTimeout(()=> btn.textContent = moto, 1600);
+  shiraseMachi.set(btn, setTimeout(()=>{ btn.textContent = btn.dataset.moto; }, 1600));
 }
 
 /* ── 画像にする（縦書きで描く） ── */
@@ -839,7 +843,8 @@ function kakunin(btn, kotoba, shigoto){
     return;
   }
   if (matteru){ clearTimeout(mattaTaima); matteru.textContent = matteru.dataset.moto; }
-  btn.dataset.moto = btn.textContent;
+  if (!btn.dataset.moto) btn.dataset.moto = btn.textContent;   /* 控えるのは一度だけ */
+  clearTimeout(shiraseMachi.get(btn));                          /* 通知が居残らないように */
   btn.textContent = kotoba;
   matteru = btn;
   mattaTaima = setTimeout(()=>{ btn.textContent = btn.dataset.moto; matteru = null; }, 4000);
