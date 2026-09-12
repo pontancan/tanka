@@ -136,6 +136,21 @@
   .dashi{display:flex;flex-wrap:wrap;gap:9px;margin:24px 0 0}
   .dashi button{font-size:14px;padding:10px 16px;border-radius:2px;border:1px solid var(--ai);background:transparent;color:var(--ai)}
   .dashi button.omo{background:var(--ai);color:var(--kami)}
+  /* 旅のしまつ。消す方は目立たせない */
+  .shimatsu{display:flex;flex-wrap:wrap;gap:9px;margin:34px 0 0;
+            border-top:1px solid var(--sen);padding-top:18px}
+  .shimatsu button{font-size:14px;padding:10px 16px;border-radius:2px;
+                   border:1px solid var(--ai);background:transparent;color:var(--ai)}
+  .shimatsu button.kesu{border-color:var(--sen);color:var(--awa)}
+
+  /* 思い出の棚 */
+  .tana{display:grid;gap:4px;justify-items:start;text-align:left;width:100%;
+        background:var(--kami);border:1px solid var(--sen);border-radius:2px;
+        padding:14px 16px;margin:0 0 10px;font-family:inherit}
+  .tana .na{font-family:var(--mincho);font-size:18px;color:var(--sumi)}
+  .tana .soe{font-size:12px;color:var(--awa)}
+  .modoru{font-size:13px;color:var(--ai);background:transparent;border:0;padding:8px 0;margin:0 0 6px}
+
   .minohon{margin-top:18px;display:grid;gap:12px;justify-items:start}
   .minohon img{max-width:100%;border:1px solid var(--sen);border-radius:2px;background:var(--kami)}
   .minohon button{font-size:14px;padding:10px 16px;border-radius:2px;
@@ -173,8 +188,9 @@
       <button class="tojiru" id="tojiru">とじる</button>
     </div>
     <nav class="kirikae" aria-label="画面">
-      <button id="tab-yomu">よむ</button>
-      <button id="tab-miru">おもいで</button>
+      <button id="tab-yomu">詠む</button>
+      <button id="tab-miru">読む</button>
+      <button id="tab-omoide">思い出</button>
     </nav>
   </header>
 
@@ -194,6 +210,27 @@
     <div class="minohon" id="minohon" hidden>
       <img id="mino-gazo" alt="">
       <button class="omo" id="e-hozon">保存する</button>
+    </div>
+    <div class="shimatsu">
+      <button id="e-shimau">思い出にしまう</button>
+      <button class="kesu" id="e-sara">まっさらにする</button>
+    </div>
+  </section>
+
+  <section id="men-omoide" hidden>
+    <div id="omoide-ichiran"></div>
+    <div id="omoide-mi" hidden>
+      <button class="modoru" id="omoide-modoru">← 一覧へ</button>
+      <div class="hyoshi" id="o-hyoshi"></div>
+      <div id="o-hon"></div>
+      <div class="dashi">
+        <button class="omo" id="o-gazo">画像にする</button>
+        <button id="o-moji">文字をコピー</button>
+      </div>
+      <div class="minohon" id="o-minohon" hidden>
+        <img id="o-mino-gazo" alt="">
+        <button class="omo" id="o-e-hozon">保存する</button>
+      </div>
     </div>
   </section>
 
@@ -250,15 +287,16 @@ const kura = (()=>{
   };
 })();
 const KAGI = "tabi-tanka:satsu";
+const KAGI_O = "tabi-tanka:omoide";   /* しまった冊の棚 */
 const HOZON_MACHI = 150;
 
-function karasatsu(){ return { v:1, title:"", date:"", dateEnd:"", members:"", gyo: GYO.map(()=>["","","","",""]), updated:"" }; }
+function karasatsu(){ return { v:1, id:"", title:"", date:"", dateEnd:"", members:"", gyo: GYO.map(()=>["","","","",""]), updated:"" }; }
 function yomikomu(){
   try{
     const s = JSON.parse(kura.yomu(KAGI) || "null");
     if (!s || s.v !== 1 || !Array.isArray(s.gyo)) return karasatsu();
     const k = karasatsu();
-    k.title = s.title || ""; k.date = s.date || ""; k.dateEnd = s.dateEnd || ""; k.members = s.members || "";
+    k.id = s.id || ""; k.title = s.title || ""; k.date = s.date || ""; k.dateEnd = s.dateEnd || ""; k.members = s.members || "";
     s.gyo.forEach((g,i)=>{ if (k.gyo[i] && Array.isArray(g)) g.forEach((v,j)=>{ if (j<5) k.gyo[i][j] = String(v||""); }); });
     return k;
   }catch(e){ return karasatsu(); }
@@ -425,8 +463,8 @@ function hitobito(){
   const nami = list.join("、");
   return nami.length <= 12 ? nami : list.length + "人";   /* 長くなったら人数にたたむ */
 }
-function hizuke(){
-  const a = satsu.date, b = satsu.dateEnd;
+function hizuke(s = satsu){
+  const a = s.date, b = s.dateEnd;
   if (!a) return "";
   const ten = t => t.replaceAll("-",".");
   if (!b || b === a) return ten(a);
@@ -452,14 +490,20 @@ const menYomu = document.getElementById("men-yomu");
 const menMiru = document.getElementById("men-miru");
 const tabYomu = document.getElementById("tab-yomu");
 const tabMiru = document.getElementById("tab-miru");
-function utsuru(miru){
-  menYomu.hidden = miru; menMiru.hidden = !miru;
-  tabYomu.setAttribute("aria-current", !miru);
-  tabMiru.setAttribute("aria-current", miru);
-  if (miru) hon();
+const MEN = [["yomu","men-yomu","tab-yomu"],
+             ["miru","men-miru","tab-miru"],
+             ["omoide","men-omoide","tab-omoide"]];
+function utsuru(na){
+  MEN.forEach(([n, men, tab])=>{
+    document.getElementById(men).hidden = (n !== na);
+    document.getElementById(tab).setAttribute("aria-current", n === na);
+  });
+  if (na === "miru") hon();
+  if (na === "omoide") ichiran();
 }
-tabYomu.onclick = ()=> utsuru(false);
-tabMiru.onclick = ()=>{ shimau(true); utsuru(true); };
+tabYomu.onclick = ()=> utsuru("yomu");
+tabMiru.onclick = ()=>{ shimau(true); utsuru("miru"); };
+document.getElementById("tab-omoide").onclick = ()=>{ shimau(true); utsuru("omoide"); };
 
 /* ── 行えらび ── */
 const gyoEl = document.getElementById("gyo");
@@ -564,8 +608,8 @@ function kaku(){
 }
 
 /* ── 冊ビュー ── */
-function aruUta(){
-  return GYO.map((g,i)=>({ i, ku: satsu.gyo[i] }))
+function aruUta(s = satsu){
+  return GYO.map((g,i)=>({ i, ku: s.gyo[i] }))
             .filter(u => u.ku.some(v => v.trim() !== ""));
 }
 
@@ -590,26 +634,15 @@ function kakuMiruGyo(){
   });
 }
 
-function hon(){
-  const mi = document.getElementById("minohon");
-  if (mi) mi.hidden = true;        /* 古い見本を残さない */
-  const hyoshi = document.getElementById("hyoshi");
+/* 冊を一つ、表紙と札にする。どの冊でも描ける */
+function kazaru(hyoshiEl, hakoEl, s, utas){
   const soe = [];
-  if (hizuke()) soe.push(hizuke());
-  if (satsu.members) soe.push(satsu.members);
-  hyoshi.innerHTML =
-    '<p class="tabi">' + (satsu.title ? esc(satsu.title) : "名前のない旅") + '</p>' +
+  if (hizuke(s)) soe.push(hizuke(s));
+  if (s.members) soe.push(s.members);
+  hyoshiEl.innerHTML =
+    '<p class="tabi">' + (s.title ? esc(s.title) : "名前のない旅") + '</p>' +
     (soe.length ? '<p class="soe">' + esc(soe.join("　／　")) + '</p>' : "");
-
-  kakuMiruGyo();
-
-  const hako = document.getElementById("satsu-hon");
-  hako.innerHTML = "";
-  if (!aruUta().length){
-    hako.innerHTML = '<p class="kara-satsu">まだ一句もありません。<br>「よむ」から書きはじめてください。</p>';
-    return;
-  }
-  const utas = miruUta();          /* 全部消していれば、何も出ない */
+  hakoEl.innerHTML = "";
   utas.forEach(u=>{
     const d = document.createElement("div");
     d.className = "tate";
@@ -618,25 +651,34 @@ function hon(){
     in_.className = "rakkan"; in_.textContent = GYO[u.i].na;
     in_.setAttribute("aria-label", GYO[u.i].na + "行");
     d.appendChild(in_);
-    hako.appendChild(d);
+    hakoEl.appendChild(d);
   });
+}
+
+/* 「読む」── 今の旅 */
+function hon(){
+  document.getElementById("minohon").hidden = true;   /* 古い見本を残さない */
+  kakuMiruGyo();
+  const hako = document.getElementById("satsu-hon");
+  kazaru(document.getElementById("hyoshi"), hako, satsu, miruUta());
+  if (!aruUta().length){
+    hako.innerHTML = '<p class="kara-satsu">まだ一句もありません。<br>「詠む」から書きはじめてください。</p>';
+  }
 }
 function esc(s){ return s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
 /* ── 文字にする ── */
-function mojiban(){
-  const atama = [satsu.title || "旅の短歌"];
+function mojiban(s = satsu, utas = miruUta()){
+  const atama = [s.title || "旅の短歌"];
   const soe = [];
-  if (hizuke()) soe.push(hizuke());
-  if (satsu.members) soe.push(satsu.members);
+  if (hizuke(s)) soe.push(hizuke(s));
+  if (s.members) soe.push(s.members);
   if (soe.length) atama.push(soe.join(" ／ "));
-  const hon = miruUta().map(u => u.ku.filter(v=>v.trim()!=="").join("\n")).join("\n\n");
+  const hon = utas.map(u => u.ku.filter(v=>v.trim()!=="").join("\n")).join("\n\n");
   return atama.join("\n") + "\n\n" + hon + "\n";
 }
 
-document.getElementById("e-moji").onclick = async (e)=>{
-  const t = mojiban();
-  const btn = e.currentTarget;
+async function utsusu(btn, t){
   try{
     await navigator.clipboard.writeText(t);
     shirase(btn, "コピーしました");
@@ -648,7 +690,8 @@ document.getElementById("e-moji").onclick = async (e)=>{
     catch(e2){ shirase(btn,"コピーできませんでした"); }
     ta.remove();
   }
-};
+}
+document.getElementById("e-moji").onclick = (e)=> utsusu(e.currentTarget, mojiban());
 function shirase(btn, kotoba){
   const moto = btn.textContent;
   btn.textContent = kotoba;
@@ -672,7 +715,7 @@ function tateKaku(ctx, moji, cx, ue, size, ayumi){
 }
 
 /* 巻物を描くだけ。保存はしない ── 見てから決められるように */
-function egaku(utas){
+function egaku(utas, s = satsu){
   const W = 480, size = 27, ayumi = 33, habaKu = 46;
   const uchi = 24, hidari = 34;          /* 短冊のふち／落款のための左のあき */
   const nagasa = Math.max(...utas.flatMap(u => u.ku.map(v => [...v].length)));
@@ -683,8 +726,8 @@ function egaku(utas){
   const aida = 26;
 
   const soe = [];
-  if (hizuke()) soe.push(hizuke());
-  if (satsu.members) soe.push(satsu.members);
+  if (hizuke(s)) soe.push(hizuke(s));
+  if (s.members) soe.push(s.members);
   const atamaTaka = 96 + (soe.length ? 28 : 0);
   const H = atamaTaka + utas.length*(fudaH + aida) - aida + 44;
 
@@ -699,7 +742,7 @@ function egaku(utas){
   ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#2F5D74";
   ctx.font = '400 25px "Hiragino Mincho ProN","Yu Mincho",serif';
-  ctx.fillText(satsu.title || "名前のない旅", W/2, 62);
+  ctx.fillText(s.title || "名前のない旅", W/2, 62);
   if (soe.length){
     ctx.fillStyle = "#7E9199";
     ctx.font = '400 13px "Hiragino Sans",sans-serif';
@@ -752,12 +795,10 @@ document.getElementById("e-gazo").onclick = (e)=>{
 };
 
 /* 見てから保存する */
-document.getElementById("e-hozon").onclick = async (e)=>{
-  const btn = e.currentTarget;
-  const utas = miruUta();
+function hozon(btn, s, utas){
   if (!utas.length) return;
-  const namae = (satsu.title || "旅の短歌") + ".png";
-  egaku(utas).toBlob(async (blob)=>{
+  const namae = (s.title || "旅の短歌") + ".png";
+  egaku(utas, s).toBlob(async (blob)=>{
     if (!blob){ shirase(btn,"画像にできませんでした"); return; }
     const file = new File([blob], namae, {type:"image/png"});
     if (navigator.canShare && navigator.canShare({files:[file]})){
@@ -769,7 +810,103 @@ document.getElementById("e-hozon").onclick = async (e)=>{
     setTimeout(()=> URL.revokeObjectURL(url), 4000);
     shirase(btn, "画像を保存しました");
   }, "image/png");
+}
+document.getElementById("e-hozon").onclick = (e)=> hozon(e.currentTarget, satsu, miruUta());
+
+/* ── 思い出の棚 ──
+   しまった冊をならべておく。昔の旅は見るだけ。書き換えはできない */
+function tanaYomu(){
+  try{ const a = JSON.parse(kura.yomu(KAGI_O) || "[]"); return Array.isArray(a) ? a : []; }
+  catch(e){ return []; }
+}
+function tanaKaku(a){ kura.kaku(KAGI_O, JSON.stringify(a)); }
+function nafuda(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+/* 二度押しで決める。取り消せないことだけに使う */
+let matteru = null, mattaTaima = null;
+function kakunin(btn, kotoba, shigoto){
+  if (matteru === btn){
+    clearTimeout(mattaTaima); matteru = null;
+    btn.textContent = btn.dataset.moto;
+    shigoto();
+    return;
+  }
+  if (matteru){ clearTimeout(mattaTaima); matteru.textContent = matteru.dataset.moto; }
+  btn.dataset.moto = btn.textContent;
+  btn.textContent = kotoba;
+  matteru = btn;
+  mattaTaima = setTimeout(()=>{ btn.textContent = btn.dataset.moto; matteru = null; }, 4000);
+}
+
+/* しまう。同じ旅なら上書きするので、何度しまってもふえない */
+document.getElementById("e-shimau").onclick = (e)=>{
+  const btn = e.currentTarget;
+  if (!aruUta().length){ shirase(btn, "まだ一句もありません"); return; }
+  if (!satsu.id) satsu.id = nafuda();
+  const tana = tanaYomu();
+  const hikae = JSON.parse(JSON.stringify(satsu));
+  hikae.shimatta = new Date().toISOString();
+  const ichi = tana.findIndex(t => t.id === satsu.id);
+  if (ichi >= 0) tana[ichi] = hikae; else tana.unshift(hikae);
+  tanaKaku(tana); shimau(true);
+  shirase(btn, ichi >= 0 ? "しまい直しました" : "しまいました");
 };
+
+/* まっさらにする。二度押さないと消えない */
+document.getElementById("e-sara").onclick = (e)=>{
+  kakunin(e.currentTarget, "ほんとうに消す", ()=>{
+    satsu = karasatsu();
+    kesu.clear(); ima = 0;
+    shimau(true);
+    atama(); kaku(); tsukiNi(satsu.date); hon();
+  });
+};
+
+/* ── 思い出の画面 ── */
+const ichiranEl = document.getElementById("omoide-ichiran");
+const miEl = document.getElementById("omoide-mi");
+let miteruSatsu = null;
+
+function ichiran(){
+  miEl.hidden = true; ichiranEl.hidden = false;
+  const tana = tanaYomu();
+  ichiranEl.innerHTML = "";
+  if (!tana.length){
+    ichiranEl.innerHTML = '<p class="kara-satsu">まだ何もしまっていません。<br>「読む」からしまってください。</p>';
+    return;
+  }
+  tana.forEach(t=>{
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "tana";
+    const soe = [hizuke(t), aruUta(t).length + " 首"].filter(Boolean).join("　·　");
+    b.innerHTML = '<span class="na">' + esc(t.title || "名前のない旅") + '</span>' +
+                  '<span class="soe">' + esc(soe) + '</span>';
+    b.onclick = ()=> miseru(t);
+    ichiranEl.appendChild(b);
+  });
+}
+
+function miseru(t){
+  miteruSatsu = t;
+  ichiranEl.hidden = true; miEl.hidden = false;
+  document.getElementById("o-minohon").hidden = true;
+  kazaru(document.getElementById("o-hyoshi"), document.getElementById("o-hon"), t, aruUta(t));
+  miEl.scrollIntoView({block:"nearest"});
+}
+
+document.getElementById("omoide-modoru").onclick = ()=> ichiran();
+
+document.getElementById("o-gazo").onclick = (e)=>{
+  const btn = e.currentTarget;
+  const utas = aruUta(miteruSatsu);
+  if (!utas.length){ shirase(btn, "まだ一句もありません"); return; }
+  const img = document.getElementById("o-mino-gazo");
+  img.src = egaku(utas, miteruSatsu).toDataURL("image/png");
+  img.alt = (miteruSatsu.title || "旅の短歌") + "の見本";
+  document.getElementById("o-minohon").hidden = false;
+};
+document.getElementById("o-e-hozon").onclick = (e)=> hozon(e.currentTarget, miteruSatsu, aruUta(miteruSatsu));
+document.getElementById("o-moji").onclick = (e)=> utsusu(e.currentTarget, mojiban(miteruSatsu, aruUta(miteruSatsu)));
 
 addEventListener("visibilitychange", ()=>{ if (document.hidden) shimau(true); });
 addEventListener("pagehide", ()=> shimau(true));
@@ -780,7 +917,7 @@ if (!kura.honmono){
   document.getElementById("shita").hidden = false;
 }
 
-atama(); utsuru(false); kaku();
+atama(); utsuru("yomu"); kaku();
 
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")){
   addEventListener("load", ()=> navigator.serviceWorker.register("sw.js").catch(()=>{}));
