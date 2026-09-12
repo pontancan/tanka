@@ -266,7 +266,7 @@ satsuBtn.onclick = ()=>{
   const hiraku = shirabeEl.hidden;
   shirabeEl.hidden = !hiraku;
   satsuBtn.setAttribute("aria-expanded", hiraku);
-  if (hiraku) fTitle.focus();
+  if (hiraku){ tsukiNi(satsu.date); fTitle.focus(); }
 };
 document.getElementById("tojiru").onclick = ()=>{
   shirabeEl.hidden = true;
@@ -287,10 +287,13 @@ const tsukiNa = document.getElementById("tsuki-na");
 const moji = d => d.getFullYear() + "-" +
   String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
 
-let miteruTsuki = (()=>{
-  const t = satsu.date ? new Date(satsu.date + "T00:00") : new Date();
-  return new Date(t.getFullYear(), t.getMonth(), 1);
-})();
+let miteruTsuki = null;
+/* 開くたびに旅の月へ。日がまだ無ければ今月 */
+function tsukiNi(hi){
+  const t = hi ? new Date(hi + "T00:00") : new Date();
+  miteruTsuki = new Date(t.getFullYear(), t.getMonth(), 1);
+  kakuKoyomi();
+}
 let kiten = null, machi = false, nazotta = false, hiku = false, saki = null, ozomi = null;
 
 function erabu(a, b){
@@ -390,7 +393,7 @@ document.getElementById("tsugi-tsuki").onclick = ()=>{
   miteruTsuki.setMonth(miteruTsuki.getMonth()+1); kakuKoyomi();
 };
 
-kakuKoyomi();
+tsukiNi(satsu.date);
 
 function kansei(i){ return satsu.gyo[i].every(v => v.trim() !== ""); }
 function kakikake(i){ return satsu.gyo[i].some(v => v.trim() !== ""); }
