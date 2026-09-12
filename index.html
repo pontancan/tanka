@@ -320,10 +320,11 @@ function kakuKoyomi(){
   const y = miteruTsuki.getFullYear(), m = miteruTsuki.getMonth();
   tsukiNa.textContent = y + "年 " + (m+1) + "月";
   hiGrid.innerHTML = "";
-  const saki = new Date(y, m, 1).getDay();
-  /* 前後の月の日も出して、えらべるようにする。
-     出さないと、月をまたぐ旅をなぞれない（端で止まる） */
-  for (let i=0; i<42; i++){
+  /* 前後の月の日も出して、えらべるようにする。出さないと月をまたぐ旅をなぞれない。
+     月初の曜日にかかわらず前が一週ぶん残るように、頭の週をもう一週さかのぼる
+     （日曜はじまりの月だと、そうしないと前の月が一日も出ない） */
+  const saki = new Date(y, m, 1).getDay() + 7;
+  for (let i=0; i<49; i++){
     const d = new Date(y, m, 1 - saki + i);
     const b = document.createElement("button");
     b.type = "button"; b.textContent = d.getDate();
