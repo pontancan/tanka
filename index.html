@@ -123,6 +123,10 @@
   .dashi{display:flex;flex-wrap:wrap;gap:9px;margin:24px 0 0}
   .dashi button{font-size:14px;padding:10px 16px;border-radius:2px;border:1px solid var(--ai);background:transparent;color:var(--ai)}
   .dashi button.omo{background:var(--ai);color:var(--kami)}
+  .minohon{margin-top:18px;display:grid;gap:12px;justify-items:start}
+  .minohon img{max-width:100%;border:1px solid var(--sen);border-radius:2px;background:var(--kami)}
+  .minohon button{font-size:14px;padding:10px 16px;border-radius:2px;
+                  border:1px solid var(--ai);background:var(--ai);color:var(--kami)}
 
   footer{margin-top:30px;font-size:12px;line-height:1.9;color:var(--awa)}
   .keikoku{color:var(--hi)}
@@ -172,6 +176,10 @@
     <div class="dashi">
       <button class="omo" id="e-gazo">画像にする</button>
       <button id="e-moji">文字をコピー</button>
+    </div>
+    <div class="minohon" id="minohon" hidden>
+      <img id="mino-gazo" alt="">
+      <button class="omo" id="e-hozon">保存する</button>
     </div>
   </section>
 
@@ -548,6 +556,8 @@ function aruUta(){
 }
 
 function hon(){
+  const mi = document.getElementById("minohon");
+  if (mi) mi.hidden = true;        /* 古い見本を残さない */
   const hyoshi = document.getElementById("hyoshi");
   const soe = [];
   if (hizuke()) soe.push(hizuke());
@@ -620,11 +630,8 @@ function tateKaku(ctx, moji, cx, ue, size, ayumi){
   });
 }
 
-document.getElementById("e-gazo").onclick = async (e)=>{
-  const btn = e.currentTarget;
-  const utas = aruUta();
-  if (!utas.length){ shirase(btn, "まだ一句もありません"); return; }
-
+/* 巻物を描くだけ。保存はしない ── 見てから決められるように */
+function egaku(utas){
   const W = 480, size = 27, ayumi = 33, habaKu = 46;
   const uchi = 24, hidari = 34;          /* 短冊のふち／落款のための左のあき */
   const nagasa = Math.max(...utas.flatMap(u => u.ku.map(v => [...v].length)));
@@ -686,8 +693,30 @@ document.getElementById("e-gazo").onclick = async (e)=>{
     y += fudaH + aida;
   });
 
+  return cv;
+}
+
+const minohonEl = document.getElementById("minohon");
+const minoGazo = document.getElementById("mino-gazo");
+
+/* まず見本を出す */
+document.getElementById("e-gazo").onclick = (e)=>{
+  const btn = e.currentTarget;
+  const utas = aruUta();
+  if (!utas.length){ shirase(btn, "まだ一句もありません"); return; }
+  minoGazo.src = egaku(utas).toDataURL("image/png");
+  minoGazo.alt = (satsu.title || "旅の短歌") + "の見本";
+  minohonEl.hidden = false;
+  minohonEl.scrollIntoView({block:"nearest", behavior:"smooth"});
+};
+
+/* 見てから保存する */
+document.getElementById("e-hozon").onclick = async (e)=>{
+  const btn = e.currentTarget;
+  const utas = aruUta();
+  if (!utas.length) return;
   const namae = (satsu.title || "旅の短歌") + ".png";
-  cv.toBlob(async (blob)=>{
+  egaku(utas).toBlob(async (blob)=>{
     if (!blob){ shirase(btn,"画像にできませんでした"); return; }
     const file = new File([blob], namae, {type:"image/png"});
     if (navigator.canShare && navigator.canShare({files:[file]})){
