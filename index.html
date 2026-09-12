@@ -231,6 +231,9 @@
         <img id="o-mino-gazo" alt="">
         <button class="omo" id="o-e-hozon">保存する</button>
       </div>
+      <div class="shimatsu">
+        <button class="kesu" id="o-kesu">この旅を消す</button>
+      </div>
     </div>
   </section>
 
@@ -497,6 +500,7 @@ const MEN = [["yomu","men-yomu","tab-yomu"],
              ["miru","men-miru","tab-miru"],
              ["omoide","men-omoide","tab-omoide"]];
 function utsuru(na){
+  kakuninYameru();
   MEN.forEach(([n, men, tab])=>{
     document.getElementById(men).hidden = (n !== na);
     document.getElementById(tab).setAttribute("aria-current", n === na);
@@ -840,6 +844,14 @@ function kakunin(btn, kotoba, shigoto){
   matteru = btn;
   mattaTaima = setTimeout(()=>{ btn.textContent = btn.dataset.moto; matteru = null; }, 4000);
 }
+/* 画面を離れたら待っている確認は取り下げる。
+   残しておくと、一度押して離れ、別の旅を開いて一度押しただけで消えてしまう */
+function kakuninYameru(){
+  if (!matteru) return;
+  clearTimeout(mattaTaima);
+  matteru.textContent = matteru.dataset.moto;
+  matteru = null;
+}
 
 /* しまう。同じ旅なら上書きするので、何度しまってもふえない */
 document.getElementById("e-shimau").onclick = (e)=>{
@@ -868,9 +880,10 @@ document.getElementById("e-sara").onclick = (e)=>{
 /* ── 思い出の画面 ── */
 const ichiranEl = document.getElementById("omoide-ichiran");
 const miEl = document.getElementById("omoide-mi");
-let miteruSatsu = null;
+let miteruSatsu = null, miteruIchi = -1;
 
 function ichiran(){
+  kakuninYameru();
   miEl.hidden = true; ichiranEl.hidden = false;
   const tana = tanaYomu();
   ichiranEl.innerHTML = "";
@@ -884,13 +897,14 @@ function ichiran(){
     const soe = [hizuke(t), aruUta(t).length + " 首"].filter(Boolean).join("　·　");
     b.innerHTML = '<span class="na">' + esc(t.title || "名前のない旅") + '</span>' +
                   '<span class="soe">' + esc(soe) + '</span>';
-    b.onclick = ()=> miseru(t);
+    b.onclick = ()=> miseru(t, tana.indexOf(t));
     ichiranEl.appendChild(b);
   });
 }
 
-function miseru(t){
-  miteruSatsu = t;
+function miseru(t, i){
+  kakuninYameru();
+  miteruSatsu = t; miteruIchi = i;
   ichiranEl.hidden = true; miEl.hidden = false;
   document.getElementById("o-minohon").hidden = true;
   kazaru(document.getElementById("o-hyoshi"), document.getElementById("o-hon"), t, aruUta(t));
@@ -910,6 +924,20 @@ document.getElementById("o-gazo").onclick = (e)=>{
 };
 document.getElementById("o-e-hozon").onclick = (e)=> hozon(e.currentTarget, miteruSatsu, aruUta(miteruSatsu));
 document.getElementById("o-moji").onclick = (e)=> utsusu(e.currentTarget, mojiban(miteruSatsu, aruUta(miteruSatsu)));
+
+/* 棚から消す。二度押さないと消えない */
+document.getElementById("o-kesu").onclick = (e)=>{
+  kakunin(e.currentTarget, "ほんとうに消す", ()=>{
+    const tana = tanaYomu();
+    /* 名札があればそれで。無い古い冊は並びの位置で */
+    const nokori = miteruSatsu && miteruSatsu.id
+      ? tana.filter(t => t.id !== miteruSatsu.id)
+      : tana.filter((t, i) => i !== miteruIchi);
+    tanaKaku(nokori);
+    miteruSatsu = null; miteruIchi = -1;
+    ichiran();
+  });
+};
 
 addEventListener("visibilitychange", ()=>{ if (document.hidden) shimau(true); });
 addEventListener("pagehide", ()=> shimau(true));
