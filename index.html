@@ -72,7 +72,9 @@
   /* ── 行えらび ── */
   .gyo{display:flex;flex-wrap:wrap;gap:7px;margin:22px 0 0}
   .gyo button{display:flex;align-items:center;gap:6px;font-family:var(--mincho);font-size:15px;padding:7px 11px;border-radius:2px;background:transparent;color:var(--awa);border:1px solid var(--sen)}
-  .gyo button[aria-current="true"]{background:var(--ai);color:var(--kami);border-color:var(--ai)}
+  .gyo button[aria-current="true"],
+  .gyo button[aria-pressed="true"]{background:var(--ai);color:var(--kami);border-color:var(--ai)}
+  #miru-gyo{margin:14px 0 20px}
   .gyo .shirushi{width:5px;height:5px;border-radius:50%;background:transparent}
   .gyo .kakikake .shirushi{background:var(--sen)}
   .gyo .kanryo .shirushi{background:var(--ai)}
@@ -183,6 +185,7 @@
 
   <section id="men-miru" hidden>
     <div class="hyoshi" id="hyoshi"></div>
+    <nav class="gyo" id="miru-gyo" aria-label="出す行をえらぶ"></nav>
     <div id="satsu-hon"></div>
     <div class="dashi">
       <button class="omo" id="e-gazo">画像にする</button>
@@ -566,6 +569,27 @@ function aruUta(){
             .filter(u => u.ku.some(v => v.trim() !== ""));
 }
 
+/* 消している行。画面のことなので、しまわない（開き直せば全部出る） */
+const kesu = new Set();
+function miruUta(){ return aruUta().filter(u => !kesu.has(u.i)); }
+
+function kakuMiruGyo(){
+  const aru = aruUta();
+  /* 無くなった行を消しっぱなしにしない */
+  [...kesu].forEach(i => { if (!aru.some(u => u.i === i)) kesu.delete(i); });
+  const el = document.getElementById("miru-gyo");
+  el.innerHTML = "";
+  el.hidden = aru.length < 2;          /* 一首しか無いならえらぶ意味がない */
+  aru.forEach(u=>{
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = "<span>" + GYO[u.i].na + "行</span>";
+    b.setAttribute("aria-pressed", !kesu.has(u.i));
+    b.onclick = ()=>{ kesu.has(u.i) ? kesu.delete(u.i) : kesu.add(u.i); hon(); };
+    el.appendChild(b);
+  });
+}
+
 function hon(){
   const mi = document.getElementById("minohon");
   if (mi) mi.hidden = true;        /* 古い見本を残さない */
@@ -577,13 +601,15 @@ function hon(){
     '<p class="tabi">' + (satsu.title ? esc(satsu.title) : "名前のない旅") + '</p>' +
     (soe.length ? '<p class="soe">' + esc(soe.join("　／　")) + '</p>' : "");
 
+  kakuMiruGyo();
+
   const hako = document.getElementById("satsu-hon");
   hako.innerHTML = "";
-  const utas = aruUta();
-  if (!utas.length){
+  if (!aruUta().length){
     hako.innerHTML = '<p class="kara-satsu">まだ一句もありません。<br>「よむ」から書きはじめてください。</p>';
     return;
   }
+  const utas = miruUta();          /* 全部消していれば、何も出ない */
   utas.forEach(u=>{
     const d = document.createElement("div");
     d.className = "tate";
@@ -604,7 +630,7 @@ function mojiban(){
   if (hizuke()) soe.push(hizuke());
   if (satsu.members) soe.push(satsu.members);
   if (soe.length) atama.push(soe.join(" ／ "));
-  const hon = aruUta().map(u => u.ku.filter(v=>v.trim()!=="").join("\n")).join("\n\n");
+  const hon = miruUta().map(u => u.ku.filter(v=>v.trim()!=="").join("\n")).join("\n\n");
   return atama.join("\n") + "\n\n" + hon + "\n";
 }
 
@@ -717,7 +743,7 @@ const minoGazo = document.getElementById("mino-gazo");
 /* まず見本を出す */
 document.getElementById("e-gazo").onclick = (e)=>{
   const btn = e.currentTarget;
-  const utas = aruUta();
+  const utas = miruUta();
   if (!utas.length){ shirase(btn, "まだ一句もありません"); return; }
   minoGazo.src = egaku(utas).toDataURL("image/png");
   minoGazo.alt = (satsu.title || "旅の短歌") + "の見本";
@@ -728,7 +754,7 @@ document.getElementById("e-gazo").onclick = (e)=>{
 /* 見てから保存する */
 document.getElementById("e-hozon").onclick = async (e)=>{
   const btn = e.currentTarget;
-  const utas = aruUta();
+  const utas = miruUta();
   if (!utas.length) return;
   const namae = (satsu.title || "旅の短歌") + ".png";
   egaku(utas).toBlob(async (blob)=>{
