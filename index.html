@@ -108,6 +108,7 @@
   .kara-satsu{font-size:14px;color:var(--awa);line-height:1.9;margin:30px 0}
 
   .tate{
+    position:relative;
     writing-mode:vertical-rl;
     font-family:var(--mincho);font-size:17px;line-height:2.1;letter-spacing:.06em;
     background:var(--kami);border:1px solid var(--sen);border-radius:2px;
@@ -115,6 +116,16 @@
     overflow-x:auto;overscroll-behavior-x:contain;
   }
   .tate p{margin:0}
+  /* 画像の落款と同じ印。どの行の首かが画面でも分かるように。
+     親が縦書きなので、ここだけ横に戻す */
+  .tate .rakkan{
+    position:absolute;left:16px;bottom:16px;
+    writing-mode:horizontal-tb;
+    width:28px;height:28px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--ai);color:var(--kami);
+    font-family:var(--mincho);font-size:14px;letter-spacing:0;
+  }
 
   /* 下の遊び。キーボードが上がった時に最後の欄を持ち上げる余地がないと、
      ブラウザが勝手に画面をずらして「完了」で引き戻す。あれで酔う */
@@ -577,6 +588,10 @@ function hon(){
     const d = document.createElement("div");
     d.className = "tate";
     d.innerHTML = u.ku.filter(v=>v.trim()!=="").map(v=>'<p>'+esc(v)+'</p>').join("");
+    const in_ = document.createElement("span");
+    in_.className = "rakkan"; in_.textContent = GYO[u.i].na;
+    in_.setAttribute("aria-label", GYO[u.i].na + "行");
+    d.appendChild(in_);
     hako.appendChild(d);
   });
 }
