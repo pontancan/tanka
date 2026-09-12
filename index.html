@@ -291,7 +291,7 @@ let miteruTsuki = (()=>{
   const t = satsu.date ? new Date(satsu.date + "T00:00") : new Date();
   return new Date(t.getFullYear(), t.getMonth(), 1);
 })();
-let kiten = null, machi = false, nazotta = false, hiku = false, saki = null;
+let kiten = null, machi = false, nazotta = false, hiku = false, saki = null, ozomi = null;
 
 function erabu(a, b){
   if (a > b) [a, b] = [b, a];
@@ -339,41 +339,48 @@ function hiNo(x, y){
   return b && hiGrid.contains(b) ? b.dataset.hi : null;
 }
 
+/* 押した時点では決めない。離す時に「触っただけ」か「なぞった」かを見る。
+   押した瞬間に確定させると、直前の選択に引きずられて範囲が繋がってしまう */
 hiGrid.addEventListener("pointerdown", e=>{
   const h = hiNo(e.clientX, e.clientY);
   if (!h) return;
   e.preventDefault();
-  /* 捕まえるのは指を追うためだけ。なぞり中かどうかは自分で持つ
+  /* 捕まえるのは指を追うためだけ。なぞり中かは自分で持つ
      （hasPointerCapture に頼ると、捕まえ損ねた時に静かに死ぬ） */
   try{ hiGrid.setPointerCapture(e.pointerId); }catch(_){}
-  hiku = true; nazotta = false; saki = h;
-  if (machi && kiten){ erabu(kiten, h); machi = false; }
-  else { kiten = h; machi = true; erabu(h, h); }
+  hiku = true; nazotta = false; ozomi = h; saki = h;
 });
 
 hiGrid.addEventListener("pointermove", e=>{
-  if (!hiku || !kiten) return;
+  if (!hiku) return;
   const h = hiNo(e.clientX, e.clientY);
   if (!h || h === saki) return;
-  saki = h; nazotta = true;
+  saki = h;
+  if (!nazotta){ nazotta = true; kiten = ozomi; }   /* ここでなぞりが始まった */
   erabu(kiten, h);
 });
 
 function owari(e){
   try{ hiGrid.releasePointerCapture(e.pointerId); }catch(_){}
+  if (!hiku) return;
   hiku = false;
-  if (nazotta) machi = false;       /* なぞり終えた＝範囲が決まった */
+  if (nazotta){ machi = false; return; }            /* なぞり終えた＝範囲が決まった */
+  fureru(ozomi);                                    /* 動かなかった＝触っただけ */
 }
 hiGrid.addEventListener("pointerup", owari);
 hiGrid.addEventListener("pointercancel", owari);
+
+/* 触る一回ぶん。待っている途中なら、そこまで伸ばす */
+function fureru(h){
+  if (machi && kiten && kiten !== h){ erabu(kiten, h); machi = false; }
+  else { kiten = h; erabu(h, h); machi = true; }
+}
 
 /* 指を使わない時（キーボードのEnter/Space）。pointerdown を伴わないclickだけ拾う */
 hiGrid.addEventListener("click", e=>{
   if (e.detail !== 0) return;
   const b = e.target.closest("[data-hi]");
-  if (!b) return;
-  if (machi && kiten){ erabu(kiten, b.dataset.hi); machi = false; }
-  else { kiten = b.dataset.hi; machi = true; erabu(kiten, kiten); }
+  if (b) fureru(b.dataset.hi);
 });
 
 document.getElementById("mae-tsuki").onclick = ()=>{
