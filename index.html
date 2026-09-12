@@ -291,7 +291,7 @@ let miteruTsuki = (()=>{
   const t = satsu.date ? new Date(satsu.date + "T00:00") : new Date();
   return new Date(t.getFullYear(), t.getMonth(), 1);
 })();
-let kiten = null, machi = false, nazotta = false;
+let kiten = null, machi = false, nazotta = false, hiku = false, saki = null;
 
 function erabu(a, b){
   if (a > b) [a, b] = [b, a];
@@ -343,22 +343,25 @@ hiGrid.addEventListener("pointerdown", e=>{
   const h = hiNo(e.clientX, e.clientY);
   if (!h) return;
   e.preventDefault();
-  hiGrid.setPointerCapture(e.pointerId);
-  nazotta = false;
+  /* 捕まえるのは指を追うためだけ。なぞり中かどうかは自分で持つ
+     （hasPointerCapture に頼ると、捕まえ損ねた時に静かに死ぬ） */
+  try{ hiGrid.setPointerCapture(e.pointerId); }catch(_){}
+  hiku = true; nazotta = false; saki = h;
   if (machi && kiten){ erabu(kiten, h); machi = false; }
   else { kiten = h; machi = true; erabu(h, h); }
 });
 
 hiGrid.addEventListener("pointermove", e=>{
-  if (!hiGrid.hasPointerCapture(e.pointerId) || !kiten) return;
+  if (!hiku || !kiten) return;
   const h = hiNo(e.clientX, e.clientY);
-  if (!h || h === satsu.dateEnd) return;
-  nazotta = true;
+  if (!h || h === saki) return;
+  saki = h; nazotta = true;
   erabu(kiten, h);
 });
 
 function owari(e){
-  if (hiGrid.hasPointerCapture(e.pointerId)) hiGrid.releasePointerCapture(e.pointerId);
+  try{ hiGrid.releasePointerCapture(e.pointerId); }catch(_){}
+  hiku = false;
   if (nazotta) machi = false;       /* なぞり終えた＝範囲が決まった */
 }
 hiGrid.addEventListener("pointerup", owari);
