@@ -333,9 +333,12 @@ document.getElementById("tojiru").onclick = ()=>{
   satsuBtn.setAttribute("aria-expanded","false");
 };
 [[fTitle,"title"],[fMembers,"members"]].forEach(([el,key])=>{
-  el.value = satsu[key];
   el.addEventListener("input", ()=>{ satsu[key] = el.value; atama(); shimau(); });
 });
+/* 冊を入れ替えたら欄も引き直す。入れ替えただけだと古い名が残り、
+   一文字打った拍子に satsu へ書き戻されて復活する */
+function shirabeNaosu(){ fTitle.value = satsu.title; fMembers.value = satsu.members; }
+shirabeNaosu();
 
 /* ── 暦 ──
    一日だけなら、ぽんと触る。何日かにわたるなら、指でなぞる。
@@ -858,7 +861,7 @@ document.getElementById("e-sara").onclick = (e)=>{
     satsu = karasatsu();
     kesu.clear(); ima = 0;
     shimau(true);
-    atama(); kaku(); tsukiNi(satsu.date); hon();
+    shirabeNaosu(); atama(); kaku(); tsukiNi(satsu.date); hon();
   });
 };
 
