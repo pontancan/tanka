@@ -483,6 +483,7 @@ function kaku(){
     const input = document.createElement("input");
     input.type = "text"; input.value = satsu.gyo[ima][i];
     input.setAttribute("aria-label", oto + "からはじまる" + haku + "音");
+    input.enterKeyHint = (i < 4) ? "next" : "done";   /* 返しキーの顔つきを変える */
     strip.appendChild(input);
 
     const kazu = document.createElement("div"); kazu.className = "kazu";
@@ -513,6 +514,14 @@ function kaku(){
     });
     input.addEventListener("compositionstart", ()=> henkanchu = true);
     input.addEventListener("compositionend", ()=>{ henkanchu = false; input.dispatchEvent(new Event("input")); });
+
+    /* 改行で次の音へ。変換中のEnterは確定なので拾わない（isComposing と 229 の両方を見る） */
+    input.addEventListener("keydown", e=>{
+      if (e.key !== "Enter" || henkanchu || e.isComposing || e.keyCode === 229) return;
+      e.preventDefault();
+      const tsugi = utaEl.querySelectorAll(".strip input")[i+1];
+      if (tsugi) tsugi.focus(); else input.blur();   /* 五つめで終い */
+    });
     input.addEventListener("input", ()=>{
       if (!henkanchu){
         /* 音数では切らない。枠にはいるところまで */
